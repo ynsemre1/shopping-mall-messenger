@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
-import useLocation from "../hooks/useLocation";
+import useLocation from "../hooks/testUseLocation";
 import { getCurrentMall } from "../utils/mallLocator";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
