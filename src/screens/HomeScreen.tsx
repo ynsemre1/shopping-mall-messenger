@@ -1,19 +1,15 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
-import useLocation from "../hooks/useLocation";
-import { getCurrentMall } from "../utils/mallLocator";
-import { useNavigation } from "@react-navigation/native";
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, Button } from 'react-native';
+import useLocation from '../hooks/testUseLocation';
+import { getCurrentMall } from '../utils/mallLocator';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-import { Button } from "react-native";
 
 interface Mall {
   id: string;
   name: string;
-  center: {
-    lat: number;
-    lng: number;
-  };
+  center: { lat: number; lng: number };
   radius: number;
 }
 
@@ -22,7 +18,7 @@ const HomeScreen = () => {
   const [currentMall, setCurrentMall] = useState<Mall | null>(null);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  
+
   useEffect(() => {
     if (location) {
       const matchedMall = getCurrentMall(location.latitude, location.longitude);
@@ -46,13 +42,16 @@ const HomeScreen = () => {
           </Text>
           <Button
             title="Sohbete Katıl"
-            onPress={() => navigation.navigate("Chat")}
+            onPress={() =>
+              navigation.navigate('Chat', {
+                mallId: currentMall.id,
+                mallName: currentMall.name,
+              })
+            }
           />
         </>
       ) : (
-        <Text style={styles.mallText}>
-          Şu anda desteklenen bir AVM’de değilsin.
-        </Text>
+        <Text style={styles.mallText}>Şu anda desteklenen bir AVM’de değilsin.</Text>
       )}
     </View>
   );
@@ -61,24 +60,8 @@ const HomeScreen = () => {
 export default HomeScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-    backgroundColor: "#fff",
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  mallText: {
-    fontSize: 18,
-    textAlign: "center",
-  },
-  error: {
-    color: "red",
-    fontSize: 16,
-  },
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, backgroundColor: '#fff' },
+  title: { fontSize: 22, fontWeight: 'bold', marginBottom: 20 },
+  mallText: { fontSize: 18, textAlign: 'center' },
+  error: { color: 'red', fontSize: 16 },
 });

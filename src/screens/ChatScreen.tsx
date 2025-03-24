@@ -5,14 +5,17 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
-  StyleSheet
+  StyleSheet,
 } from 'react-native';
+import { RouteProp, useRoute } from '@react-navigation/native';
+import { RootStackParamList } from '../navigation/types';
 import { collection, addDoc, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
-const mallId = 'kizilay';
-
 const ChatScreen = () => {
+  const route = useRoute<RouteProp<RootStackParamList, 'Chat'>>();
+  const { mallId, mallName } = route.params;
+
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
 
@@ -23,15 +26,15 @@ const ChatScreen = () => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map(doc => ({
+      const msgs = snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
       setMessages(msgs);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [mallId]);
 
   const handleSend = async () => {
     if (input.trim() === '') return;
@@ -41,8 +44,8 @@ const ChatScreen = () => {
       createdAt: new Date(),
       user: {
         _id: 'user1',
-        name: 'Yunus'
-      }
+        name: 'Yunus',
+      },
     });
 
     setInput('');
@@ -50,6 +53,8 @@ const ChatScreen = () => {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.header}>{mallName} Chat Odası</Text>
+
       <FlatList
         data={messages}
         inverted
@@ -81,12 +86,23 @@ export default ChatScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-  message: { marginBottom: 12, padding: 10, backgroundColor: '#f1f1f1', borderRadius: 6 },
+  header: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  message: {
+    marginBottom: 12,
+    padding: 10,
+    backgroundColor: '#f1f1f1',
+    borderRadius: 6,
+  },
   sender: { fontWeight: 'bold', marginBottom: 4 },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 12
+    paddingTop: 12,
   },
   input: {
     flex: 1,
@@ -94,12 +110,12 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderRadius: 6,
     padding: 8,
-    marginRight: 8
+    marginRight: 8,
   },
   sendButton: {
     backgroundColor: '#007AFF',
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 6
-  }
+    borderRadius: 6,
+  },
 });
