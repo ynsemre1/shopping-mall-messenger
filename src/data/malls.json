@@ -1,0 +1,20 @@
+[
+    {
+      "id": "ankamall",
+      "name": "AnkaMall",
+      "center": {
+        "lat": 39.947948,
+        "lng": 32.808400
+      },
+      "radius": 200
+    },
+    {
+      "id": "kizilay",
+      "name": "Kızılay AVM",
+      "center": {
+        "lat": 39.920824,
+        "lng": 32.854047
+      },
+      "radius": 180
+    }
+  ]
