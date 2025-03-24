@@ -6,9 +6,13 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { RouteProp, useRoute } from "@react-navigation/native";
+import { useRoute } from "@react-navigation/native";
 import { RootStackParamList } from "../navigation/types";
+import { RouteProp } from "@react-navigation/native";
 import {
   collection,
   addDoc,
@@ -16,21 +20,39 @@ import {
   orderBy,
   query,
 } from "firebase/firestore";
-import { db } from "../services/firebase";
-import { auth } from "../services/firebase";
+import { db, auth } from "../services/firebase";
+import useLocation from "../hooks/testUseLocation";
+import { getCurrentMall } from "../utils/mallLocator";
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-const CURRENT_USER_ID = "user1"; // Şimdilik sabit kullanıcı
+type ChatRouteProp = RouteProp<RootStackParamList, "Chat">;
 
 const ChatScreen = () => {
-  const route = useRoute<RouteProp<RootStackParamList, "Chat">>();
-  const { mallId, mallName } = route.params;
-
+  const route = useRoute<ChatRouteProp>();
+  const [mallId, setMallId] = useState<string | null>(
+    route.params?.mallId || null
+  );
+  const [mallName, setMallName] = useState<string | null>(
+    route.params?.mallName || null
+  );
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState("");
-
+  const { location } = useLocation();
   const uid = auth.currentUser?.uid;
 
   useEffect(() => {
+    if (!mallId && location) {
+      const matchedMall = getCurrentMall(location.latitude, location.longitude);
+      if (matchedMall) {
+        setMallId(matchedMall.id);
+        setMallName(matchedMall.name);
+      }
+    }
+  }, [location]);
+
+  useEffect(() => {
+    if (!mallId) return;
+
     const q = query(
       collection(db, "chats", mallId, "messages"),
       orderBy("createdAt", "desc")
@@ -48,7 +70,7 @@ const ChatScreen = () => {
   }, [mallId]);
 
   const handleSend = async () => {
-    if (input.trim() === "") return;
+    if (input.trim() === "" || !mallId || !uid) return;
 
     await addDoc(collection(db, "chats", mallId, "messages"), {
       text: input,
@@ -62,77 +84,101 @@ const ChatScreen = () => {
     setInput("");
   };
 
-  const renderItem = ({ item }: { item: any }) => {
-    const isOwnMessage = item.user?._id === uid;
-
+  if (!mallId || !mallName) {
     return (
-      <View
-        style={[
-          styles.messageRow,
-          isOwnMessage ? styles.myMessage : styles.otherMessage,
-        ]}
-      >
-        {!isOwnMessage && (
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {item.user?.name?.charAt(0).toUpperCase() || "?"}
-            </Text>
-          </View>
-        )}
-
-        <View
-          style={[
-            styles.bubble,
-            { backgroundColor: isOwnMessage ? "#DCF8C6" : "#f1f1f1" },
-          ]}
-        >
-          {!isOwnMessage && (
-            <Text style={styles.sender}>{item.user?.name}</Text>
-          )}
-          <Text style={styles.messageText}>{item.text}</Text>
-        </View>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Konumdan AVM bilgisi alınıyor...</Text>
       </View>
     );
-  };
+  }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>{mallName} Chat Odası</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={90} // iOS için tab bar yüksekliğine göre ayarlanabilir
+    >
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <Text style={styles.header}>{mallName} Chat Odası</Text>
 
-      <FlatList
-        data={messages}
-        inverted
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-      />
+        <View style={styles.messagesWrapper}>
+          <FlatList
+            data={messages}
+            inverted
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => {
+              const isOwnMessage = item.user?._id === uid;
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          value={input}
-          onChangeText={setInput}
-          style={styles.input}
-          placeholder="Mesaj yaz..."
-        />
-        <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
-          <Text style={styles.sendText}>Gönder</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+              return (
+                <View
+                  style={[
+                    styles.messageRow,
+                    isOwnMessage ? styles.myMessage : styles.otherMessage,
+                  ]}
+                >
+                  {!isOwnMessage && (
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>
+                        {item.user?.name?.charAt(0).toUpperCase() || "?"}
+                      </Text>
+                    </View>
+                  )}
+
+                  <View
+                    style={[
+                      styles.bubble,
+                      { backgroundColor: isOwnMessage ? "#DCF8C6" : "#f1f1f1" },
+                    ]}
+                  >
+                    {!isOwnMessage && (
+                      <Text style={styles.sender}>{item.user?.name}</Text>
+                    )}
+                    <Text style={styles.messageText}>{item.text}</Text>
+                  </View>
+                </View>
+              );
+            }}
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            value={input}
+            onChangeText={setInput}
+            style={styles.input}
+            placeholder="Mesaj yaz..."
+          />
+          <TouchableOpacity onPress={handleSend} style={styles.sendButton}>
+            <Text style={{ color: "#fff" }}>Gönder</Text>
+          </TouchableOpacity>
+        </View>
+        </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 };
 
 export default ChatScreen;
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 12, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#fff" },
   header: {
     fontSize: 18,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 12,
+    paddingVertical: 12,
+    backgroundColor: "#f9f9f9",
+    borderBottomWidth: 1,
+    borderColor: "#ddd",
   },
-  messageContainer: {
+  messagesWrapper: {
+    flex: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  messageRow: {
     flexDirection: "row",
+    alignItems: "flex-end",
     marginVertical: 6,
     maxWidth: "80%",
   },
@@ -157,13 +203,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#000",
   },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#007AFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  avatarText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    paddingTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderTopWidth: 1,
     borderTopColor: "#eee",
-    paddingHorizontal: 6,
+    backgroundColor: "#fff",
   },
   input: {
     flex: 1,
@@ -180,27 +240,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 20,
   },
-  sendText: {
-    color: "#fff",
-    fontWeight: "bold",
-  },
-  messageRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    marginVertical: 6,
-    maxWidth: "80%",
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#007AFF",
-    alignItems: "center",
+  loadingContainer: {
+    flex: 1,
     justifyContent: "center",
-    marginRight: 8,
+    alignItems: "center",
+    padding: 24,
+    backgroundColor: "#fff",
   },
-  avatarText: {
-    color: "#fff",
-    fontWeight: "bold",
+  loadingText: {
+    fontSize: 16,
+    marginTop: 12,
+    color: "#555",
   },
 });
